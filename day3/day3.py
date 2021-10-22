@@ -5,9 +5,6 @@ Created on Fri Oct 22 10:10:45 2021
 @author: hongb
 """
 
-
-f = "input.txt"
-
 def wire1_reader( pos, wire_dict,steps, wire1_steps, instrc):
     direction = instrc[0]
     moves = int(instrc[1:])
@@ -77,7 +74,7 @@ def wire2_reader(pos, wire_dict, steps, wire1_steps, instrc):
                 ans2 = min(ans2, wire1_steps[tmp] + steps) #part2
     return tmp, ans1, steps, ans2
     
-
+f = "input.txt"
 lines = open(f)
 
 wires = []
