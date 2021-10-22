@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 22 12:41:36 2021
+Created on Fri Oct 22 12:56:02 2021
 
 @author: hongb
 """
+
+
 from itertools import permutations
 
 class opcode_machine:
@@ -11,6 +13,7 @@ class opcode_machine:
         self.ptr = 0
         self.seq = [i for i in opcode]
         self.halt = False
+        self.pause = False
         self.input = []
         self.output = None
         
@@ -21,9 +24,13 @@ class opcode_machine:
         self.seq[pos] = val
         
     def run_machine(self):
-        while not self.halt:
+        while 1:
             self.read_once()
-        return self.output
+            if self.halt:
+                return True, self.output
+            elif self.pause:
+                return False, self.output
+        
         
     def decode(self, ins):
         major_code = 0
@@ -139,6 +146,9 @@ class opcode_machine:
         
     def opcode_3(self, parameters):
         pos1 = self.seq[self.ptr+1]
+        if len(self.input) == 0:
+            self.pause = True
+            return
  
         self.seq[pos1] = self.input.pop(0)        
         
@@ -246,8 +256,10 @@ lines = open(f)
 for l in lines:
     opcode = list(map(int,l.strip().split(",")))
     
-test = permutations([1,2,3,4,0])    
+    
+test = permutations([5,6,7,8,9])    
 ans = 0
+
 
 for combo in test:
     a,b,c,d,e = combo
@@ -257,35 +269,62 @@ for combo in test:
     C = opcode_machine(opcode)
     D = opcode_machine(opcode)
     E = opcode_machine(opcode)
-    
     A.add_input(a)
-    A.add_input(0)
-    
-    signal = A.run_machine()
-    
     B.add_input(b)
-    B.add_input(signal)
-    
-    signal = B.run_machine()
-    
     C.add_input(c)
-    C.add_input(signal)
-    
-    signal = C.run_machine()
-    
     D.add_input(d)
-    D.add_input(signal)
-    
-    signal = D.run_machine()
-    
     E.add_input(e)
-    E.add_input(signal)
-    
-    signal = E.run_machine()
-    
-    ans = max(ans, signal)
-    
-print(ans)
-#255590
 
+    signal = 0
+    while 1:
 
+        
+        A.add_input(signal)
+        A.pause = False
+        
+        ok, signal = A.run_machine()
+        
+        B.add_input(signal)
+        B.pause = False
+        
+        ok,signal = B.run_machine()
+        
+        C.add_input(signal)
+        C.pause = False
+        
+        ok,signal = C.run_machine()
+        
+
+        D.add_input(signal)
+        D.pause = False
+        
+        ok,signal = D.run_machine()
+        
+        
+        E.add_input(signal)
+        E.pause = False
+        
+        ok,signal = E.run_machine()
+
+        if ok:
+            ans = max(signal, ans)
+            break
+
+print(ans)   
+#58285150
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
