@@ -114,3 +114,4 @@ a,b,c = cycle_len
 
 tmp = a * b // math.gcd(a,b)
 print(tmp * c // math.gcd(tmp,c))
+#400128139852752

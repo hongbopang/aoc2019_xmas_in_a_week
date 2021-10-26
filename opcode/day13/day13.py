@@ -1,20 +1,73 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 22 16:13:02 2021
+Created on Fri Oct 22 17:24:26 2021
 
 @author: hongb
 """
-
-
+import copy
 class opcode_machine:
     def __init__(self, opcode):
         self.ptr = 0
         self.seq = [i for i in opcode]
+        self.seq += [0 for _ in range(1000)]
         self.halt = False
         self.input = []
-        self.output = None
+        self.output = []
         self.base = 0
+        self.pause = False        
         
+        self.score = 0
+        self.screen = dict()
+        for i in range(5):
+            self.screen[i] = []
+            
+        self.ball_col = None
+        self.paddle_col = None
+        
+        self.image = None
+            
+    def parse_screen(self):
+        ptr = 0
+        for i in range(5):
+            self.screen[i] = []
+        while ptr < len(self.output):
+            x = self.output[ptr]
+            y = self.output[ptr+1]
+            tile = self.output[ptr+2]
+            if tile == 3:
+                self.ball_col = x
+            elif tile == 4:
+                self.paddle_col = x
+            if x == -1 and y == 0:
+                self.score = tile
+            else:
+                self.screen[tile].append((x,y))
+            ptr += 3  
+            
+        if not self.image:
+            minx, maxx, miny, maxy = 0,0,0,0
+            walls = self.screen[1]
+
+            for wall in walls:
+                x,y = wall
+                minx = min(minx, x)    
+                miny = min(miny, y)    
+                maxx = max(maxx, x)    
+                maxy = max(maxy, y)
+
+            x_len, y_len = maxx - minx + 1, maxy - miny + 1
+            
+            self.image = [[0 for _ in range(x_len)] for __ in range(y_len)]                  
+            
+            
+        for key in self.screen:
+            for x,y in self.screen[key]:
+                self.image[y][x] = key       
+            
+
+        self.pause = False
+        self.output = []
+            
     def add_input(self, input_val):
         self.input.append(input_val)
 
@@ -22,9 +75,16 @@ class opcode_machine:
         self.seq[pos] = val
         
     def run_machine(self):
-        while not self.halt:
+        while 1:
             self.read_once()
-        return self.output
+            if self.pause:
+                
+                self.parse_screen()         
+                
+                return False
+            if self.halt:                
+                self.parse_screen()
+                return True
         
     def decode(self, ins):
         major_code = 0
@@ -100,7 +160,7 @@ class opcode_machine:
 
         major_code, locations = self.decode(instruction)
 
-     
+
 
         if major_code == 99:
             self.opcode_terminate()
@@ -145,6 +205,9 @@ class opcode_machine:
         
     def opcode_3(self, parameters):
         loc1 = parameters[0]
+        if len(self.input) == 0:
+            self.pause = True
+            return
         self.seq[loc1] = self.input.pop(0)        
         
         self.ptr += 2
@@ -152,8 +215,8 @@ class opcode_machine:
     def opcode_4(self, parameters):
         loc1 = parameters[0]
         num1 = self.seq[loc1]
-        print(num1)
-        self.output =  num1
+        
+        self.output.append(num1)
         self.ptr += 2
         
     def opcode_5(self, parameters):
@@ -200,8 +263,7 @@ class opcode_machine:
         
     def opcode_9(self, parameters):
         loc1 = parameters[0]
-        num1 = self.seq[loc1]      
-            
+        num1 = self.seq[loc1]                
  
         self.base += num1  
         
@@ -210,3 +272,41 @@ class opcode_machine:
         
     def opcode_terminate(self):
         self.halt = True
+        
+        
+f = "input.txt"
+
+lines = open(f)
+
+for l in lines:
+    opcode = list(map(int,l.strip().split(",")))
+    
+arcade = opcode_machine(opcode)
+player = opcode_machine(opcode)
+
+
+arcade.run_machine()
+print(len(arcade.screen[2]))
+#213
+
+
+player.modify(0,2)
+player.run_machine()
+
+inputs = [-1,0,1]
+decisions = [0,0,0]
+scores = [0,0,0]
+
+while not player.halt:
+
+
+    players = [copy.deepcopy(player),copy.deepcopy(player),copy.deepcopy(player)]
+    for i in range(3):
+        players[i].add_input(inputs[i])
+        players[i].run_machine()
+        decisions[i] = abs(players[i].ball_col - players[i].paddle_col)
+        scores[i] = players[i].score
+    idx = decisions.index(min(decisions))  
+    player = players[idx]
+print(player.score)
+#11441

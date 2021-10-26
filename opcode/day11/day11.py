@@ -130,7 +130,7 @@ class opcode_machine:
 
         major_code, locations = self.decode(instruction)
 
-     
+        
 
         if major_code == 99:
             self.opcode_terminate()
