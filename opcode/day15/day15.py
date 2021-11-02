@@ -15,6 +15,15 @@ class opcode_machine:
         self.input = []
         self.output = None
         self.base = 0
+        self.oxygen = None
+        
+        self.r_c = (0,0)
+
+        self.frontier = [((0,0), None, [], 0)] # [location, parent, pathfromorigin, distance]
+        self.distances = dict() # -1 for walls
+        self.directions = [(1,0), (-1,0), (0,-1), (0,1)] #NE positive
+        self.paths = dict()
+        self.paths[(0,0)] = []
         
     def add_input(self, input_val):
         self.input.append(input_val)
@@ -22,6 +31,92 @@ class opcode_machine:
     def modify(self, pos, val):
         self.seq[pos] = val
         
+    def operate(self):
+        ans = 0
+        while not ans:
+            ans = self.bfs()
+        print(ans)
+        
+        while len(self.frontier) != 0:
+            self.bfs()
+        
+    def attempt_move(self, instruction):
+        self.add_input(instruction)
+        self.pause = False
+        self.run_machine()
+        
+        result = self.output
+        
+        if instruction == 1 or instruction == 3:
+            opp = instruction + 1
+        else:
+            opp = instruction - 1
+
+        if result == 0:
+            return -1
+        elif result == 1:
+            self.add_input(opp)
+            self.run_machine() 
+            self.output = None
+            return 0
+        else:
+            self.add_input(opp)
+            self.run_machine() 
+            self.output = None
+
+            return 1
+            
+            
+    def goto(self, target):
+
+        path_home = self.paths[self.r_c]
+        path_home = path_home[::-1]
+        back_path = []
+
+        for i in path_home:
+            if i == 0 or i == 2:
+                opp = i + 1
+            else:
+                opp = i - 1
+            back_path.append(opp)
+
+    
+        fwd_path =  self.paths[target]       
+        united_path =  back_path + fwd_path
+        
+        for i in united_path:
+            instruction = i + 1
+            self.pause = False
+            self.add_input(instruction)
+            self.run_machine()
+        
+        self.r_c = target
+        
+    def bfs(self):
+
+        me, parent,pathfromorigin, distance = self.frontier.pop(0)        
+        ans = 0
+        if me != self.r_c:
+            self.goto(me)
+
+        for i in range(len(self.directions)):
+            
+            tmpr, tmpc = me[0] + self.directions[i][0], me[1] + self.directions[i][1]
+
+            if (tmpr, tmpc) not in self.paths:
+                result = self.attempt_move(i+1)
+
+                if result != -1:     
+                    self.frontier.append(((tmpr,tmpc), me, pathfromorigin + [i], distance + 1))
+                    self.paths[(tmpr,tmpc)] = pathfromorigin + [i]     
+                    if distance + 1 not in self.distances:
+                        self.distances[distance+1] = []
+                    self.distances[distance+1].append((tmpr,tmpc))
+                    if result == 1:
+                        ans = distance + 1
+                        self.oxygen = (tmpr,tmpc)
+        return ans
+    
     def run_machine(self):
         while 1:
             self.read_once()
@@ -29,7 +124,7 @@ class opcode_machine:
                 return False
             elif self.halt:
                 return True
-        return self.output
+
         
     def decode(self, ins):
         major_code = 0
@@ -150,9 +245,10 @@ class opcode_machine:
         
     def opcode_3(self, parameters):
         loc1 = parameters[0]
-        if len(self.seq[loc1]) == 0:
+        if len(self.input) == 0:
             self.pause = True
             return
+
         self.seq[loc1] = self.input.pop(0)        
         
         self.ptr += 2
@@ -160,7 +256,7 @@ class opcode_machine:
     def opcode_4(self, parameters):
         loc1 = parameters[0]
         num1 = self.seq[loc1]
-        print(num1)
+
         self.output =  num1
         self.ptr += 2
         
@@ -218,3 +314,43 @@ class opcode_machine:
         
     def opcode_terminate(self):
         self.halt = True
+        
+        
+f = "input.txt"
+
+lines = open(f)
+
+for l in lines:
+    opcode = list(map(int,l.strip().split(",")))
+    
+maze_robot = opcode_machine(opcode)
+part2_robot = opcode_machine(opcode)
+ans = maze_robot.operate()
+
+#224
+
+locations = [(0,0)]
+
+for i in maze_robot.distances:
+    locations += maze_robot.distances[i]
+    
+
+
+frontier = [maze_robot.oxygen]
+
+distances = dict()
+distances[maze_robot.oxygen] = 0
+
+while len(frontier) != 0:
+    r,c = frontier.pop(0)
+    curr_dist = distances[(r,c)]
+    
+    next_steps = [(r+1,c), (r-1,c), (r,c-1), (r, c+1)]
+    
+    for tmp in next_steps:
+        if tmp in locations and tmp not in distances:
+            frontier.append(tmp)
+            distances[tmp] = curr_dist + 1
+            
+print(curr_dist)
+#284
